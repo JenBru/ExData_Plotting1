@@ -2,13 +2,14 @@ getwd()
 setwd("~/coursera/4explore/work")
 
 install.packages("lubridate")
-library(lubridate)
-
 install.packages("ggplot2")
-library(ggplot2)
-
 install.packages("gridExtra")
+install.packages("scales")
+
+library(lubridate)
+library(ggplot2)
 library(gridExtra)
+library(scales)
 
 fileUrl<-"https://d396qusza40orc.cloudfront.net/exdata%2Fdata%2Fhousehold_power_consumption.zip"
 download.file(fileUrl, destfile="power.zip")
@@ -60,18 +61,42 @@ axis(1, at=xticks, labels=xticks)
 power$datePosix<-as.POSIXlt(power$date, format="%Y%m%d")
 power$combinedDates<-paste(power$datePosix,power$Time)
 power$tsDate<-as.POSIXlt(power$combinedDates)
+#power$tsDate2<-as.Date(power$tsDate)
 
 # use ggplot for plotting line graph
-ggplot(power, aes(x=tsDate, y=Global_active_power))+geom_line()
-# this produces basic plot, need to clean up axes & labeling
+# ggplot(power, aes(x=tsDate, y=Global_active_power))+geom_line()
+# this produces basic plot, need to clean up axes & labeling-- see below for full plot...
 
+lims <- strptime(c("2007-02-01 00:00:00","2007-02-03 00:00:00"), format = "%Y-%m-%d %H:%M")
+lims2<-as.POSIXct(lims) # fixed in response to error message, lims no good
+
+#ggplot(power, aes(x=tsDate, y=Global_active_power))+geom_line()+ theme_bw() +theme_classic()+scale_y_continuous(name="Global Active Power (kw)") + scale_x_datetime(name="", limits=lims2, breaks = date_breaks(width="1 day"),labels=c(wday(date_breaks(width="1 day"))))
+#using breaks = date_breaks(width="1 day") was not working in conjunction with labels. 
+#error msg was " Breaks and labels are different lengths"
+#-- could not determine a way to fix, so tried this way instead:
+
+breaks <- strptime(c("2007-02-01 00:00:00","2007-02-02 00:00:00","2007-02-03 00:00:00"), format = "%Y-%m-%d %H:%M")
+labels<-wday(breaks,label=TRUE)
+breaks2<-as.POSIXct(breaks) # fixed in response to error message, had to be posixCt not lt for ggplot
+
+ggplot(power, aes(x=tsDate, y=Global_active_power))+geom_line()+ theme_bw() +theme_classic()+scale_y_continuous(name="Global Active Power (kw)") + scale_x_datetime(name="", limits=lims2, breaks=breaks2,labels=labels)
+# hooray, it worked :)
 
 
 #3 multi line plots
 ggplot(power, aes(tsDate)) + 
     geom_line(aes(y = Sub_metering_1, colour = "black")) + 
-    geom_line(aes(y = Sub_metering_2, colour = "blue")) +
-    geom_line(aes(y = Sub_metering_3, colour = "red"))
+    geom_line(aes(y = Sub_metering_2, colour = "red")) +
+    geom_line(aes(y = Sub_metering_3, colour = "blue")) +
+    theme_bw() +theme_classic()+ scale_y_continuous(name="Energy submetering") +
+    scale_x_datetime(name="", limits=lims2, breaks=breaks2,labels=labels) +
+    theme(legend.justification = 'right', legend.position=c(1,0.85)) +
+    scale_color_manual("",labels = c("Sub_metering_1", "Sub_metering_2", "Sub_metering_3"), values = c("black", "blue","red"))+
+    theme(panel.border = element_rect(fill=NA,color="black", linetype="solid"))+
+    theme(legend.background= element_rect(fill=NA,color="black", linetype="solid" ))
+
+# this was helpful resource for panel border: http://stackoverflow.com/questions/22151085/problems-with-panel-border-in-ggplot
+# for legend box lines: adapted the above and reviewed http://www.cookbook-r.com/Graphs/Legends_(ggplot2)/
 # this produces basic plot, need to clean up axes & labeling & legend
 
 
@@ -79,21 +104,25 @@ ggplot(power, aes(tsDate)) +
 # first create 4 indiv plots, then combine them
 
 # global active power
-plot1<-ggplot(power, aes(x=tsDate, y=Global_active_power))+geom_line()
+plot1<-ggplot(power, aes(x=tsDate, y=Global_active_power))+geom_line()+ theme_bw() +theme_classic()+scale_y_continuous(name="Global Active Power (kw)") + scale_x_datetime(name="", limits=lims2, breaks=breaks2,labels=labels)
 # voltage
-plot2<-ggplot(power, aes(x=tsDate, y=Voltage))+geom_line()
+plot2<-ggplot(power, aes(x=tsDate, y=Voltage))+geom_line()+ theme_bw() +theme_classic()+scale_y_continuous(name="Voltage") + scale_x_datetime(name="", limits=lims2, breaks=breaks2,labels=labels)
 # energy submetering (from above)
 plot3<-ggplot(power, aes(tsDate)) + 
     geom_line(aes(y = Sub_metering_1, colour = "black")) + 
-    geom_line(aes(y = Sub_metering_2, colour = "blue")) +
-    geom_line(aes(y = Sub_metering_3, colour = "red"))
-
+    geom_line(aes(y = Sub_metering_2, colour = "red")) +
+    geom_line(aes(y = Sub_metering_3, colour = "blue")) +
+    theme_bw() +theme_classic()+ scale_y_continuous(name="Energy submetering") +
+    scale_x_datetime(name="", limits=lims2, breaks=breaks2,labels=labels) +
+    theme(legend.justification = 'right', legend.position=c(1,0.75)) +
+    scale_color_manual("",labels = c("Sub_metering_1", "Sub_metering_2", "Sub_metering_3"), values = c("black", "blue","red"))+
+    theme(panel.border = element_rect(fill=NA,color="black", linetype="solid"))
+    
 # global REactive power
-plot4<-ggplot(power, aes(x=tsDate, y=Global_reactive_power))+geom_line()
+plot4<-ggplot(power, aes(x=tsDate, y=Global_reactive_power))+geom_line()+ theme_bw() +theme_classic()+scale_y_continuous(name="Global_reactive_power") + scale_x_datetime(name="", limits=lims2, breaks=breaks2,labels=labels)
 
 # see for useful hint on grid.arrange function:
 # http://stackoverflow.com/questions/1249548/side-by-side-plots-with-ggplot2
 grid.arrange(plot1, plot2, plot3, plot4, ncol=2)
 
-# still need to fix axis ticks & labeling
 
